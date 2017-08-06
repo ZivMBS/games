@@ -1,0 +1,516 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Snake</title>
+    <link rel="icon" type="image/png" href="images/favicon-snake.png" sizes="32x32"/>
+</head>
+
+<body>
+    <a href="../../index.html">Go back to homepage</a>
+    <canvas id="canvas" width="750" height="750"></canvas>
+</body>
+</html>
+<style>
+body {
+    background: black;
+    font-family: Calibri;
+    user-select: none;
+}
+
+canvas {
+    border: 2px solid white;
+    position: absolute;
+    margin: auto;
+    top: 0; bottom: 0; right: 0; left: 0;
+}
+
+a {
+    color: #808080;
+    text-decoration: none;
+    font-size: 2.5vh;
+}
+
+a:hover {
+    color: #A0A0A0;
+}
+</style>
+<script>
+window.onload = function() {
+    canvas = document.getElementById("canvas");
+    ctx = canvas.getContext("2d");
+    menuLoop = setInterval(gameMenu, 1000 / frameRate);
+    food = new foodFunc();
+    document.addEventListener("keydown", keyDown);
+    document.addEventListener("mousedown", mouseDown);
+    
+    if (localStorage.length != 0) {
+        score = JSON.parse(localStorage.score);
+        menu.mode = JSON.parse(localStorage.menuMode);
+        menu.difficulty = JSON.parse(localStorage.menuDifficulty);
+        menu.borderMode = JSON.parse(localStorage.menuBorderMode);
+        menu.timer = JSON.parse(localStorage.timer);
+    }
+}
+var score = {
+    last: 0,
+    normal: 0,
+    timeAttack: 0
+}
+var frameRate = 10;
+var tileSize = 25;
+var textArr = [];
+var snakeIMG = new Image();
+snakeIMG.src = "snake.png";
+var snake = {
+    x: random(1, canvas.width / tileSize) * tileSize - tileSize,
+    y: random(1, canvas.height / tileSize) * tileSize - tileSize,
+    w: tileSize - 1,
+    h: tileSize - 1,
+    startX: random(1, 4) * 25 - 25,
+    dir: "none", // none / right / left / up / down.
+    changedDir: false,
+    length: 0, // not counting the head.
+    tail: [],
+    eatFood: function() {
+        if (this.x == food.x && this.y == food.y) {
+            food = new foodFunc();
+            this.length += 1;
+            if (menu.difficulty == "easy")
+                score.last += 5;
+            if (menu.difficulty == "medium")
+                score.last += 10;
+            if (menu.difficulty == "hard")
+                score.last += 15;
+        }
+    },
+    lose: function() {
+        for (i = 0; i < this.tail.length; i++) {
+            if (this.tail[i].x == this.x && this.tail[i].y == this.y) {
+                return true;
+            }
+        }
+        if (menu.borderMode == "lose") {
+            if (this.x < 0 || this.x >= canvas.width) {
+                return true;
+            }
+            if (this.y < 0 || this.y >= canvas.height) {
+                return true;
+            }
+        }
+        if (menu.mode == "time-attack" && menu.time == 0) {
+            alert("Time has run out!\nScore: " + score.last);
+            menu.restartGame();
+        }
+    },
+    move: function() {
+        this.changedDir = false;
+        if (this.dir === "up") {
+            this.startX = 0;
+            this.y += -tileSize;
+        }
+        if (this.dir === "right") {
+            this.startX = 25;
+            this.x += tileSize;
+        }
+        if (this.dir === "down") {
+            this.startX = 50;
+            this.y += tileSize;
+        }
+        if (this.dir === "left") {
+            this.startX = 75;
+            this.x += -tileSize;
+        }
+    },
+    drawTail: function() {
+        for (i = this.tail.length - 1; i >= 1; i--) {
+            ctx.fillStyle = "#00FF00";
+            ctx.fillRect(this.tail[i].x + 1, this.tail[i].y + 1, tileSize - 2, tileSize - 2);
+            ctx.fillStyle = "black";
+        }
+    },
+    changeDir: function(direction) {
+        this.direction = direction;
+        if (!this.changedDir) {
+            if (direction == "up" && direction != "down") {
+                this.dir = direction;
+            }
+            if (direction == "right" && direction != "left") {
+                this.dir = direction;
+            }
+            if (direction == "down" && direction != "up") {
+                this.dir = direction;
+            }
+            if (direction == "left" && direction != "right") {
+                this.dir = direction;
+            }
+            this.changedDir = true;
+        }
+    },
+    draw: function() {
+        ctx.drawImage(snakeIMG, this.startX, 0, this.w, this.h, this.x, this.y, this.w, this.h);
+    }
+}
+
+function timerUpdate() {
+    if (menu.time > 0) {
+        menu.time--;
+    } else {
+        clearInterval(timerLoop);
+    }
+    minutes = Math.floor(menu.time / 60);
+    seconds = menu.time % 60;
+    if (seconds < 10)
+        seconds = "0" + seconds;
+    menu.timeSTR = minutes + ":" + seconds;
+}
+
+var menu = {
+    x: canvas.width * 0.1,
+    y: canvas.height * 0.2,
+    gameStarted: false,
+    gamePaused: false,
+    mode: "normal", //normal / time-attack
+    difficulty: "medium", //speed: easy / medium / hard - 10 / 15 / 20 (frameRate)
+    borderMode: "lose", //lose / go-through
+    timeSTR: "1:00",
+    time: 60,
+    timer: 60, //60 / 180
+    startGame: function() {
+        if (!this.gameStarted) {
+            this.gameStarted = true;
+            gameLoop = setInterval(gameUpdate, 1000 / frameRate);
+            clearInterval(menuLoop);
+        }
+        if (this.mode == "time-attack") {
+            this.time = this.timer;
+            timerLoop = setInterval(timerUpdate, 1000);
+            clearInterval(menuLoop);
+        }
+        score.last = 0;
+    },
+    pauseGame: function() {
+        clearInterval(gameLoop);
+        if (menu.mode == "time-attack")
+            clearInterval(timerLoop);
+        this.gamePaused = true;
+    },
+    restartGame: function() {
+        clearInterval(gameLoop);
+        if (this.mode == "time-attack")
+            clearInterval(timerLoop);
+        menuLoop = setInterval(gameMenu, 1000/frameRate);
+        this.gameStarted = false;
+        snake.dir = "none";
+        snake.tail = [];
+        snake.length = 0;
+        food = new foodFunc();
+        snake.x = random(1, canvas.width / tileSize) * tileSize - tileSize;
+        snake.y = random(1, canvas.height / tileSize) * tileSize - tileSize;
+        snake.startX = random(1, 4) * 25 - 25;
+        localStorage.score = JSON.stringify(score);
+        localStorage.menuMode = JSON.stringify(menu.mode);
+        localStorage.menuDifficulty = JSON.stringify(menu.difficulty);
+        localStorage.menuBorderMode = JSON.stringify(menu.borderMode);
+        localStorage.timer = JSON.stringify(menu.timer);
+    },
+    draw: function() {
+        //Menu border.
+        ctx.textAlign = "center";
+        ctx.fillStyle = "white";
+        ctx.fillRect(this.x, this.y, canvas.width - this.x * 2, canvas.height - this.y * 2);
+        ctx.clearRect(this.x + 10, this.y + 10, canvas.width - this.x * 2 - 20, canvas.height - this.y * 2 - 20);
+        //Snake and By Ziv Ben-Shabat.
+        drawText(canvas.width / 2, canvas.height * 0.27, "Snake", "#00FF00", 40, "Calibri", "center");
+        drawText(canvas.width / 2, canvas.height * 0.32, "By ZivMBS", "#00FF00", 25, "Calibri", "center");
+        //Mode, Difficulty and Border.
+        drawText(canvas.width * 0.25, canvas.height * 0.42, "Game Mode:", "white", 30, "Calibri", "center");
+        drawText(canvas.width * 0.5, canvas.height * 0.42, "Difficulty:", "white", 30, "Calibri", "center");
+        //Score and High Scores.
+        drawText(canvas.width * 0.5, canvas.height * 0.54, "Last game Score: " + score.last, "white", 30, "Calibri", "center");
+        if (this.mode != "time-attack") {
+            drawText(canvas.width * 0.75, canvas.height * 0.42, "Border Mode:", "white", 30, "Calibri", "center");
+            drawText(canvas.width * 0.5, canvas.height * 0.58, "Normal High Score: " + score.normal, "white", 30, "Calibri", "center");
+        } else {
+            drawText(canvas.width * 0.75, canvas.height * 0.42, "Time:", "white", 30, "Calibri", "center");
+            drawText(canvas.width * 0.5, canvas.height * 0.58, "Time-Attack High Score: " + score.timeAttack, "white", 30, "Calibri", "center");
+        }
+        //Controls.
+        drawText(canvas.width * 0.5, canvas.height * 0.66, "Controls", "white", 25, "Calibri", "center");
+        drawText(canvas.width * 0.5, canvas.height * 0.7, "Press ARROW keys to move", "white", 20, "Calibri", "center");
+        drawText(canvas.width * 0.5, canvas.height * 0.73, "Press SPACE to start playing", "white", 20, "Calibri", "center");
+        drawText(canvas.width * 0.5, canvas.height * 0.76, "Press ESC to pause / resume", "white", 20, "Calibri", "center");
+        this.updateSettings();
+    },
+    updateSettings: function() {
+        switch (this.mode) {
+            case "normal":
+                drawText(canvas.width * 0.25, canvas.height * 0.47, "Normal", "white", 25, "Calibri", "center");
+                break;
+            case "time-attack":
+                drawText(canvas.width * 0.25, canvas.height * 0.47, "Time-Attack", "white", 25, "Calibri", "center");
+                this.borderMode = "go-through";
+                break;
+        }
+        switch (this.difficulty) {
+            case "easy":
+                drawText(canvas.width * 0.5, canvas.height * 0.47, "Easy", "green", 25, "Calibri", "center");
+                frameRate = 10;
+                break;
+            case "medium":
+                drawText(canvas.width * 0.5, canvas.height * 0.47, "Medium", "orange", 25, "Calibri", "center");
+                frameRate = 15;
+                break;
+            case "hard":
+                drawText(canvas.width * 0.5, canvas.height * 0.47, "Hard", "red", 25, "Calibri", "center");
+                frameRate = 20;
+                break;
+        }
+        if (this.mode != "time-attack") {
+            switch (this.borderMode) {
+                case "lose":
+                    drawText(canvas.width * 0.75, canvas.height * 0.47, "Lose", "red", 25, "Calibri", "center");
+                    break;
+                case "go-through":
+                    drawText(canvas.width * 0.75, canvas.height * 0.47, "Go Through", "green", 25, "Calibri", "center");
+                    break;
+            }
+        } else {
+            switch (this.timer) {
+                case 60:
+                    drawText(canvas.width * 0.75, canvas.height * 0.47, "1:00", "cyan", 25, "Calibri", "center");
+                    menu.timeSTR = "1:00";
+                    break;
+                case 180:
+                    drawText(canvas.width * 0.75, canvas.height * 0.47, "3:00", "cyan", 25, "Calibri", "center");
+                    menu.timeSTR = "3:00";
+                    break;
+            }
+        }
+    }
+}
+
+function drawText(x, y, text, color, size, font, align, baseline) {
+    size = JSON.stringify(size);
+    if (color === undefined)
+        color = "black";
+    if (size === undefined)
+        size = "10";
+    if (font === undefined)
+        font = "Arial";
+    if (align === undefined)
+        align = "start";
+    baseline = baseline;
+    if (baseline === undefined)
+        baseline = "alphabetic";
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.font = size + "px " + font;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    //defaults the style.
+    ctx.font = "10px Arial";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+}
+
+function drawScore() {
+    ctx.textAlign = "left";
+    drawText(5, canvas.height - 5, "Score: " + score.last, "white", 20, "Calibri", "left");
+    if (menu.mode == "time-attack") {
+        drawText(canvas.width - 5, canvas.height - 5, menu.timeSTR, "white", 20, "Calibri", "right");
+    }
+}
+
+function foodFunc() {
+    this.x = random(1, canvas.width / tileSize) * tileSize - tileSize;
+    this.y = random(1, canvas.height / tileSize) * tileSize - tileSize;
+    this.w = tileSize - 2;
+    this.h = tileSize - 2;
+    this.color = "#FF00AB";
+    this.draw = function() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x + 1, this.y + 1, this.w, this.h);
+        ctx.fillStyle = "black";
+    }
+    this.onSnake = function() {
+        for (i = 0; i < snake.tail.length; i++) {
+            if (this.x == snake.x && this.y == snake.y) {
+                return true;
+            }
+            if (this.x == snake.tail[i].x && this.y == snake.tail[i].y) {
+                return true;
+            }
+        }
+    }
+}
+
+function textureLastTail() {
+    if (snake.tail.length >= 1) {
+        snake.tail[0].dir = snake.dir;
+        if (snake.tail.length >= 2)
+            snake.tail[0].dir = snake.tail[1].dir;
+        
+        if (snake.tail[0].dir == "up")
+            ctx.drawImage(snakeIMG, 0, 25, tileSize - 1, tileSize - 1, snake.tail[0].x, snake.tail[0].y, tileSize - 1, tileSize - 1);
+        if (snake.tail[0].dir == "right")
+            ctx.drawImage(snakeIMG, 25, 25, tileSize - 1, tileSize - 1, snake.tail[0].x, snake.tail[0].y, tileSize - 1, tileSize - 1);
+        if (snake.tail[0].dir == "down")
+            ctx.drawImage(snakeIMG, 50, 25, tileSize - 1, tileSize - 1, snake.tail[0].x, snake.tail[0].y, tileSize - 1, tileSize - 1);
+        if (snake.tail[0].dir == "left")
+            ctx.drawImage(snakeIMG, 75, 25, tileSize - 1, tileSize - 1, snake.tail[0].x, snake.tail[0].y, tileSize - 1, tileSize - 1);
+    }
+}
+
+function random(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function gameMenu() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    menu.draw();
+}
+
+function gameUpdate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (score.normal <= score.last && menu.mode == "normal")
+        score.normal = score.last;
+    if (score.timeAttack <= score.last && menu.mode == "time-attack")
+        score.timeAttack = score.last;
+    textureLastTail();
+    drawScore();
+    snake.move();
+    if (menu.borderMode == "go-through") {
+        if (snake.x < 0) {
+            snake.x = canvas.width - tileSize;
+        }
+        if (snake.x >= canvas.width) {
+            snake.x = 0;
+        }
+        if (snake.y < 0) {
+            snake.y = canvas.height - tileSize;
+        }
+        if (snake.y >= canvas.height) {
+            snake.y = 0;
+        }
+    }
+    snake.drawTail();
+    if (snake.lose()) {
+        alert("You lost!\nScore: " + score.last);
+        menu.restartGame();
+        return false;
+    }
+    snake.tail.push({x: snake.x, y: snake.y, dir: snake.dir});
+    if (snake.tail.length > snake.length) {
+        snake.tail.shift();
+    }
+    snake.eatFood();
+    if (food.onSnake()) {
+        food = new foodFunc();
+    } else {
+        food.draw();
+    }
+    snake.draw();
+}
+
+function getMousePos(canvas, evt) {
+    var canvasSize = canvas.getBoundingClientRect();
+    return {
+        x: evt.clientX - canvasSize.left,
+        y: evt.clientY - canvasSize.top
+    };
+}
+
+function mouseDown(evt) {
+    this.x = getMousePos(canvas, evt).x;
+    this.y = getMousePos(canvas, evt).y;
+    
+    if (menu.mode == "normal") {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.25 - 70 && this.x <= canvas.width * 0.25 + 70)
+            menu.mode = "time-attack";
+        }
+    } else {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.25 - 70 && this.x <= canvas.width * 0.25 + 70)
+            menu.mode = "normal";
+        }
+    }
+    
+    if (menu.difficulty == "easy") {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.5 - 55 && this.x <= canvas.width * 0.5 + 55)
+            menu.difficulty = "medium";
+        }
+    } else if (menu.difficulty == "medium") {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.5 - 55 && this.x <= canvas.width * 0.5 + 55)
+            menu.difficulty = "hard";
+        }
+    } else {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.5 - 55 && this.x <= canvas.width * 0.5 + 55)
+            menu.difficulty = "easy";
+        }
+    }
+    
+    if (menu.borderMode == "lose" && menu.mode != "time-attack") {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.75 - 80 && this.x <= canvas.width * 0.75 + 80)
+            menu.borderMode = "go-through";
+        }
+    } else {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.75 - 80 && this.x <= canvas.width * 0.75 + 80)
+            menu.borderMode = "lose";
+        }
+    }
+    if (menu.mode == "time-attack" && menu.timer == 60) {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.75 - 30 && this.x <= canvas.width * 0.75 + 30)
+            menu.timer = 180;
+        }
+    } else {
+        if (this.y <= canvas.height * 0.47 + 15 && this.y >= canvas.height * 0.47 - 30) {
+            if (this.x >= canvas.width * 0.75 - 30 && this.x <= canvas.width * 0.75 + 30)
+            menu.timer = 60;
+        }
+    }
+}
+
+function keyDown(evt) {
+    if (menu.gameStarted && !menu.gamePaused) {
+        switch (evt.keyCode) {
+        case 37:
+            if (snake.dir != "right")
+                snake.changeDir("left");
+            break;
+        case 38:
+            if (snake.dir != "down")
+                snake.changeDir("up");
+            break;
+        case 39:
+            if (snake.dir != "left")
+                snake.changeDir("right");
+            break;
+        case 40:
+            if (snake.dir != "up")
+                snake.changeDir("down");
+            break;
+        }
+    } else {
+        if (evt.keyCode == 32)
+            menu.startGame();
+    }
+    if (evt.keyCode == 27) {
+        if (menu.gameStarted && !menu.gamePaused) {
+            menu.pauseGame();
+        } else if (menu.gamePaused && menu.gamePaused) {
+            gameLoop = setInterval(gameUpdate, 1000 / frameRate);
+            if (menu.mode == "time-attack")
+                timerLoop = setInterval(timerUpdate, 1000);
+            menu.gamePaused = false;
+        }
+    }
+}
+</script>
