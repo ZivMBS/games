@@ -10,7 +10,7 @@ window.onload = function() {
 function codeMobile() {
     canvas.width = 330;
     canvas.height = 330;
-    tilesize = 11;
+    tilesize = 22;
     textsize = 20;
     
     //TODO: CREATE FOR LOOP TO HANDLE BUTTON CLICKS
@@ -204,9 +204,9 @@ var game = {
     mode: {
         value: ["Normal", 2, "Normal", "Time Attack"],
         top: canvas.height * 0.427,
-        width: canvas.width * 0.194,
+        width: canvas.width * 0.225,
         height: canvas.height * 0.054,
-        left: canvas.width * 0.153,
+        left: canvas.width * 0.14,
     },
     difficulty: {
         value: ["Medium", 3, "Easy", "Medium", "Hard"],
@@ -232,8 +232,10 @@ var game = {
         loop: function() {
             if (game.timer.value > 0)
                 game.timer.value--;
-            else
+            else {
+                game.timer.started = false;
                 clearInterval(timerLoop);
+            }
             minutes = Math.floor(game.timer.value / 60);
             seconds = game.timer.value % 60;
             if (seconds < 10)
@@ -294,7 +296,7 @@ var game = {
     updateHUD: function() {
         drawText(0, canvas.height - (tilesize * 0.1), "Score: " + this.lastScore, "white", textsize * 0.6, "Calibri", "left");
         if (this.mode.value[0] == "Time Attack")
-        drawText(canvas.width - (tilesize * 0.1), canvas.height - (tilesize * 0.1), this.timer.str, "white", textsize * 0.6, "Calibri", "right");
+            drawText(canvas.width - (tilesize * 0.1), canvas.height - (tilesize * 0.1), this.timer.str, "white", textsize * 0.6, "Calibri", "right");
     },
     saveScore: function() {
         localStorage.normalHS = JSON.stringify(this.normalHS);
@@ -336,8 +338,10 @@ var game = {
             $("#spacebar").siblings().hide();
         }
         $("#canvas").css({"border-color": "white"});
-        if (game.mode.value[0] == "Time Attack")
-        	clearInterval(timerLoop);
+        if (game.mode.value[0] == "Time Attack") {
+            game.timer.started = false;
+            clearInterval(timerLoop);
+        }
         clearInterval(gameLoop);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         this.running = false;
@@ -360,7 +364,7 @@ var game = {
             this.paused = true;
         } else if (this.running && this.paused) {
             gameLoop = setInterval(this.update, 1000 / this.updates);
-            timerLoop = setInterval(this.timer.loop, 1000);
+            game.startTimer();
             this.paused = false;
         }
     },
@@ -441,15 +445,15 @@ function handleSettings(setting) {
     if (setting == "mode") {
         switch (game.mode.value[0]) {
             case "Normal":
-                ctx.clearRect(canvas.width * 0.25, canvas.height * 0.55, canvas.width * 0.50, canvas.height * 0.06);
+                ctx.clearRect(canvas.width * 0.12, canvas.height * 0.55, canvas.width * 0.76, canvas.height * 0.06);
                 ctx.clearRect(canvas.width * 0.616, canvas.height * 0.373, canvas.width * 0.266, canvas.height * 0.113);
                 drawText(canvas.width / 2, canvas.height * 0.58, "Normal High Score: " + game.normalHS, "white" , textsize * 0.75, "Calibri", "center", "middle");
                 drawText(canvas.width * 0.75, canvas.height * 0.4, "Border-Mode:", "white", textsize * 0.75, "Calibri", "center", "middle");
                 drawText(canvas.width * 0.75, canvas.height * 0.45, game.border.value[0], game.border.color[game.border.value[1] - 2], textsize * 0.65, "Calibri", "center", "middle");
                 break;
             case "Time Attack":
-                ctx.clearRect(canvas.width * 0.25, canvas.height * 0.55, canvas.width * 0.50, canvas.height * 0.06);
-                ctx.clearRect(canvas.width * 0.616, canvas.height * 0.373, canvas.width * 0.266, canvas.height * 0.113);
+                ctx.clearRect(canvas.width * 0.12, canvas.height * 0.55, canvas.width * 0.76, canvas.height * 0.06);
+                ctx.clearRect(canvas.width * 0.616, canvas.height * 0.373, canvas.width * 0.267, canvas.height * 0.113);
                 drawText(canvas.width / 2, canvas.height * 0.58, "Time-Attack High Score: " + game.timeattackHS, "white" , textsize * 0.75, "Calibri", "center", "middle");
                 drawText(canvas.width * 0.75, canvas.height * 0.4, "Time:", "white", textsize * 0.75, "Calibri", "center", "middle");
                 drawText(canvas.width * 0.75, canvas.height * 0.45, game.time[0], "cyan", textsize * 0.65, "Calibri", "center", "middle");
