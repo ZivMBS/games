@@ -47,7 +47,7 @@ body {
     font-size: 2em;
     text-align: center;
     border-radius: 5px;
-    border: none;
+    border: 1px solid black;
 }
 
 #timer {
@@ -60,7 +60,7 @@ body {
     content: "";
     width: 50%;
     min-height: 3vh;
-    background: linear-gradient(to right, #FF0000, #00FF00);
+    background: linear-gradient(to right, #FF0000, #FFBB00,  #00FF00);
     display: block;
     margin: 0 25%;
 }
@@ -72,11 +72,11 @@ body {
 
 
 .correct {
-    color: rgb(41, 223, 41);
+    color: #00FF00;
 }
 
 .incorrect {
-    color: rgb(255, 55, 55);
+    color: #FF0000;
 }
 
 .hidden {

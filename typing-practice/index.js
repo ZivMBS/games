@@ -9,30 +9,35 @@ let time = 60;
 let completed = [];
 let started = false;
 
-text.innerText = words();
-
-input.addEventListener("input", (evt) => {
+reset();
+input.addEventListener("input", () => {
     let length = input.value.length;
     if (!started) {
-        updateTime();
         started = true;
+        updateTime();
     }
     if (text.innerText.startsWith(input.value)) {
         text.innerHTML = `<span class="correct">${input.value}</span>${text.innerText.substr(length)}`;
+    } else {
+        let differenceSpot = compareStrings(text.innerText, input.value);
+        text.innerHTML = `<span class="correct">${text.innerText.substr(0, differenceSpot)}</span><span class="incorrect">${text.innerText.substr(differenceSpot, text.innerText.length-differenceSpot)}</span>`
     }
 });
 input.addEventListener("keydown", (evt) => {
-    if (evt.keyCode == 13 && time > 0)
+    if (time > 0 && evt.keyCode == 13)
         checkWord();
-})
-input.focus();
+    if (evt.shiftKey && evt.keyCode == 82) {
+        evt.preventDefault();
+        reset();
+    }
+});
 
 function checkWord() {
     let word = text.innerText;
     if (input.value == word) {
         completed.push(text.innerText);
         wordList.splice(wordList.indexOf(text.innerText), 1);
-        score.innerText = completed.length;
+        score.innerText = `Score: ${completed.length}`;
         input.value = "";
         text.innerText = words();
     }
@@ -49,25 +54,33 @@ function statistics() {
             longestWordSTR = word;
         }
     }
-
     let stats = document.getElementsByClassName("stat");
-
-    stats[1].innerText = `Average word length: ${roundToDecimalPlace(totalLength/completed.length, 3)}`;
-    stats[2].innerText = `Longest word: ${longestWord} (${longestWordSTR})`
-    stats[3].innerText = `Words per second: ${roundToDecimalPlace(completed.length/MAX_TIME, 3)}`
-    stats[4].innerText = `Letters per second: ${roundToDecimalPlace(totalLength/MAX_TIME, 3)}`
+    stats[2].innerText = `Average word length: ${roundToDecimalPlace(totalLength/completed.length, 3)}`;
+    stats[3].innerText = `Longest word: ${longestWord} (${longestWordSTR})`
+    stats[4].innerText = `Words per second: ${roundToDecimalPlace(completed.length/MAX_TIME, 3)}`
+    stats[5].innerText = `Letters per second: ${roundToDecimalPlace(totalLength/MAX_TIME, 3)}`
 }
 
-
-
+function reset() {
+    for (let word of completed) {
+        wordList.push(word);
+    }
+    completed = [];
+    time = MAX_TIME;
+    started = false;
+    text.innerText = words();
+    input.value = "";
+    input.focus();
+    showTime();
+}
 
 showTime()
 function updateTime() {
-    time--;
-    showTime()
-    if (time > 0)
+    if (time > 0 && started) {
+        time--;
+        showTime()
         setTimeout(updateTime, 1000);
-    else
+    } else
         statistics();
 }
 
@@ -76,14 +89,18 @@ function showTime() {
     timerBar.style.clipPath = `inset(0 ${(100/MAX_TIME)*(MAX_TIME-time)}% 0 0)`;
 }
 
-
-
-
-
 function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 function roundToDecimalPlace(int, digitsAfterPoint = 2) {
     return Math.round(int*10**digitsAfterPoint)/10**digitsAfterPoint;
+}
+
+function compareStrings(str1, str2) {
+    let shorter = Math.min(str1.length, str2.length);
+    for (let i = 0; i < shorter; i++) {
+        if (str1[i] != str2[i])
+            return i;
+    }
 }
