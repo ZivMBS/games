@@ -16,6 +16,7 @@ input.addEventListener("input", () => {
         started = true;
         updateTime();
     }
+    input.value = input.value.toLocaleLowerCase();
     if (text.innerText.startsWith(input.value)) {
         text.innerHTML = `<span class="correct">${input.value}</span>${text.innerText.substr(length)}`;
     } else {
