@@ -6,9 +6,11 @@ const score = document.getElementById("score");
 
 const MAX_TIME = 60;
 let time = 60;
+let highscore = 0;
 let completed = [];
 let started = false;
 
+timerBar.style.webkitTransition = `clip-path ${MAX_TIME}s linear`;
 reset();
 input.addEventListener("input", () => {
     let length = input.value.length;
@@ -38,7 +40,9 @@ function checkWord() {
     if (input.value == word) {
         completed.push(text.innerText);
         wordList.splice(wordList.indexOf(text.innerText), 1);
-        score.innerText = `Score: ${completed.length}`;
+        if (completed.length > highscore)
+            highscore = completed.length;
+        score.innerText = `Score: ${completed.length} (${highscore})`;
         input.value = "";
         text.innerText = words();
     }
@@ -79,7 +83,8 @@ showTime()
 function updateTime() {
     if (time > 0 && started) {
         time--;
-        showTime()
+        showTime();
+        timerBar.style.webkitClipPath = "inset(0 100% 0 0)";
         setTimeout(updateTime, 1000);
     } else
         statistics();
@@ -87,7 +92,6 @@ function updateTime() {
 
 function showTime() {
     timer.innerText = `${Math.floor(time/60)}:${time%60<10?"0":""}${time % 60}`;
-    timerBar.style.clipPath = `inset(0 ${(100/MAX_TIME)*(MAX_TIME-time)}% 0 0)`;
 }
 
 function random(min, max) {
