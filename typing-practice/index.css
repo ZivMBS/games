@@ -68,7 +68,7 @@ body {
 
 #timer-bar:hover {
     clip-path: inset(0 100% 0 0);
-    transition: clip-path 60s linear;
+    transition: clip-path 59s linear;
 }
 
 #score {
