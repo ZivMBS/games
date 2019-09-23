@@ -63,6 +63,12 @@ body {
     background: linear-gradient(to right, #FF0000, #FFBB00,  #00FF00);
     display: block;
     margin: 0 25%;
+    clip-path: inset(0 0 0 0);
+}
+
+#timer-bar:hover {
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 60s linear;
 }
 
 #score {
